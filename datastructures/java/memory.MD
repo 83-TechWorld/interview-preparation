@@ -7,6 +7,12 @@
 4. [Heap Dump Analysis](#heap-dump-analysis)
 5. [Memory Leak Examples & Solutions](#memory-leak-examples--solutions)
 6. [Best Practices](#best-practices)
+7. [Memory Analysis in Kubernetes & Containers](#memory-analysis-in-kubernetes--containers)
+8. [Tomcat Server Memory Analysis](#tomcat-server-memory-analysis)
+9. [IDE Plugins for Memory Analysis](#ide-plugins-for-memory-analysis)
+10. [Remote Memory Analysis Setup](#remote-memory-analysis-setup)
+11. [Container-Specific Memory Troubleshooting](#container-specific-memory-troubleshooting)
+12. [Production Monitoring Checklist](#production-monitoring-checklist)
 
 ---
 
@@ -484,12 +490,622 @@ java -jar gcviewer.jar gc.log
 
 ---
 
+## Memory Analysis in Kubernetes & Containers
+
+### Kubernetes Pod Memory Analysis
+
+#### 1. Accessing Pods for Memory Analysis
+
+```bash
+# Get pod information
+kubectl get pods -n <namespace>
+kubectl top pods -n <namespace>
+
+# Check pod memory usage
+kubectl top pod <pod-name> -n <namespace> --containers
+
+# Execute commands in pod
+kubectl exec -it <pod-name> -n <namespace> -- /bin/bash
+
+# Get JVM process ID in container
+kubectl exec <pod-name> -n <namespace> -- jps -l
+
+# Take heap dump from pod
+kubectl exec <pod-name> -n <namespace> -- jmap -dump:format=b,file=/tmp/heapdump.hprof <pid>
+
+# Copy heap dump to local machine
+kubectl cp <namespace>/<pod-name>:/tmp/heapdump.hprof ./heapdump.hprof
+```
+
+#### 2. Container Memory Limits & JVM Configuration
+
+```yaml
+# Kubernetes deployment with memory settings
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: java-app
+spec:
+  template:
+    spec:
+      containers:
+      - name: java-app
+        image: myapp:latest
+        resources:
+          requests:
+            memory: "1Gi"
+          limits:
+            memory: "2Gi"
+        env:
+        - name: JAVA_OPTS
+          value: "-XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=50.0 -XX:+UseG1GC -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/heap-dumps"
+        volumeMounts:
+        - name: heap-dumps
+          mountPath: /heap-dumps
+      volumes:
+      - name: heap-dumps
+        emptyDir: {}
+```
+
+#### 3. Monitoring Memory in Kubernetes
+
+```bash
+# Install metrics-server if not present
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+
+# Create monitoring script
+cat << 'EOF' > monitor-pod-memory.sh
+#!/bin/bash
+POD=$1
+NAMESPACE=$2
+
+while true; do
+  kubectl exec $POD -n $NAMESPACE -- sh -c 'cat /proc/1/status | grep -E "VmRSS|VmSize"'
+  kubectl exec $POD -n $NAMESPACE -- jstat -gcutil 1 1000 1
+  sleep 5
+done
+EOF
+
+chmod +x monitor-pod-memory.sh
+./monitor-pod-memory.sh <pod-name> <namespace>
+```
+
+### Amazon EKS Memory Analysis
+
+#### 1. EKS-Specific Configuration
+
+```bash
+# Connect to EKS cluster
+aws eks update-kubeconfig --name <cluster-name> --region <region>
+
+# Enable Container Insights for monitoring
+aws eks create-addon \
+  --cluster-name <cluster-name> \
+  --addon-name adot \
+  --addon-version latest
+
+# Deploy CloudWatch agent for detailed metrics
+kubectl apply -f https://raw.githubusercontent.com/aws-samples/amazon-cloudwatch-container-insights/latest/k8s-deployment-manifest-templates/deployment-mode/daemonset/container-insights-monitoring/cloudwatch-namespace.yaml
+```
+
+#### 2. EKS Pod Memory Profiling
+
+```yaml
+# EKS pod with JMX enabled for remote profiling
+apiVersion: v1
+kind: Service
+metadata:
+  name: jmx-service
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 9090
+    targetPort: 9090
+    name: jmx
+  selector:
+    app: java-app
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: java-app
+spec:
+  template:
+    spec:
+      containers:
+      - name: java-app
+        image: myapp:latest
+        ports:
+        - containerPort: 9090
+        env:
+        - name: JAVA_OPTS
+          value: >-
+            -Dcom.sun.management.jmxremote
+            -Dcom.sun.management.jmxremote.port=9090
+            -Dcom.sun.management.jmxremote.rmi.port=9090
+            -Dcom.sun.management.jmxremote.authenticate=false
+            -Dcom.sun.management.jmxremote.ssl=false
+            -Djava.rmi.server.hostname=localhost
+```
+
+#### 3. Using AWS Systems Manager for Heap Dumps
+
+```bash
+# Create SSM document for heap dump
+aws ssm create-document --name "JavaHeapDump" --document-type "Command" --content '{
+  "schemaVersion": "2.2",
+  "description": "Take Java Heap Dump",
+  "mainSteps": [
+    {
+      "action": "aws:runShellScript",
+      "name": "takeHeapDump",
+      "inputs": {
+        "runCommand": [
+          "#!/bin/bash",
+          "PID=$(pgrep java)",
+          "jmap -dump:format=b,file=/tmp/heapdump-$(date +%Y%m%d-%H%M%S).hprof $PID",
+          "aws s3 cp /tmp/heapdump*.hprof s3://my-bucket/heap-dumps/"
+        ]
+      }
+    }
+  ]
+}'
+```
+
+### Docker Container Memory Analysis
+
+#### 1. Direct Docker Commands
+
+```bash
+# Check container memory usage
+docker stats <container-id>
+
+# Execute heap dump in container
+docker exec <container-id> jmap -dump:format=b,file=/tmp/heapdump.hprof 1
+
+# Copy heap dump from container
+docker cp <container-id>:/tmp/heapdump.hprof ./heapdump.hprof
+
+# Attach to container for live analysis
+docker exec -it <container-id> /bin/bash
+
+# Check Java process memory
+docker exec <container-id> jcmd 1 VM.native_memory summary
+```
+
+#### 2. Docker Compose with Memory Limits
+
+```yaml
+version: '3.8'
+services:
+  java-app:
+    image: myapp:latest
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    environment:
+      JAVA_OPTS: >-
+        -XX:MaxRAMPercentage=75.0
+        -XX:+UseContainerSupport
+        -XX:+HeapDumpOnOutOfMemoryError
+        -XX:HeapDumpPath=/dumps
+    volumes:
+      - ./heap-dumps:/dumps
+    ports:
+      - "9090:9090"  # JMX port
+```
+
+---
+
+## Tomcat Server Memory Analysis
+
+### 1. Tomcat JVM Configuration
+
+```bash
+# catalina.sh or setenv.sh configuration
+export CATALINA_OPTS="$CATALINA_OPTS -Xms1024m"
+export CATALINA_OPTS="$CATALINA_OPTS -Xmx4096m"
+export CATALINA_OPTS="$CATALINA_OPTS -XX:+UseG1GC"
+export CATALINA_OPTS="$CATALINA_OPTS -XX:+HeapDumpOnOutOfMemoryError"
+export CATALINA_OPTS="$CATALINA_OPTS -XX:HeapDumpPath=/opt/tomcat/dumps/"
+export CATALINA_OPTS="$CATALINA_OPTS -XX:+PrintGCDetails"
+export CATALINA_OPTS="$CATALINA_OPTS -XX:+PrintGCDateStamps"
+export CATALINA_OPTS="$CATALINA_OPTS -Xloggc:/opt/tomcat/logs/gc.log"
+
+# Enable JMX for remote monitoring
+export CATALINA_OPTS="$CATALINA_OPTS -Dcom.sun.management.jmxremote"
+export CATALINA_OPTS="$CATALINA_OPTS -Dcom.sun.management.jmxremote.port=9090"
+export CATALINA_OPTS="$CATALINA_OPTS -Dcom.sun.management.jmxremote.authenticate=false"
+export CATALINA_OPTS="$CATALINA_OPTS -Dcom.sun.management.jmxremote.ssl=false"
+```
+
+### 2. Tomcat Memory Leak Detection
+
+```xml
+<!-- server.xml - Enable memory leak detection -->
+<Server>
+  <Listener className="org.apache.catalina.core.JreMemoryLeakPreventionListener" />
+  <Listener className="org.apache.catalina.core.ThreadLocalLeakPreventionListener" />
+</Server>
+```
+
+### 3. Analyzing Tomcat Memory Issues
+
+```bash
+# Find Tomcat process
+ps aux | grep tomcat
+
+# Take thread dump
+kill -3 <tomcat-pid>
+# Or
+jstack <tomcat-pid> > thread_dump.txt
+
+# Analyze Tomcat heap
+jmap -heap <tomcat-pid>
+
+# Check loaded classes (useful for PermGen/Metaspace issues)
+jmap -clstats <tomcat-pid>
+
+# Monitor Tomcat with JConsole
+jconsole <tomcat-host>:9090
+```
+
+### 4. Tomcat Manager App for Monitoring
+
+```xml
+<!-- tomcat-users.xml -->
+<tomcat-users>
+  <role rolename="manager-gui"/>
+  <role rolename="manager-status"/>
+  <user username="admin" password="password" roles="manager-gui,manager-status"/>
+</tomcat-users>
+```
+
+Access: `http://localhost:8080/manager/status`
+
+---
+
+## IDE Plugins for Memory Analysis
+
+### IntelliJ IDEA Plugins
+
+#### 1. **JProfiler Integration**
+```
+Installation: File → Settings → Plugins → Search "JProfiler"
+Usage:
+- Run → Profile 'Application'
+- Analyze CPU, Memory, Threads
+- Take heap snapshots
+- Find memory leaks
+```
+
+#### 2. **VisualVM Launcher**
+```
+Installation: File → Settings → Plugins → Search "VisualVM Launcher"
+Configuration:
+- Set VisualVM executable path
+- Right-click on main class → Run with VisualVM
+- Automatic profiling integration
+```
+
+#### 3. **JVM Debugger Memory View**
+```
+Built-in Feature:
+- Debug your application
+- View → Tool Windows → Memory View
+- Track object allocations
+- Analyze memory consumption during debugging
+```
+
+#### 4. **Eclipse Memory Analyzer (MAT) Integration**
+```
+Installation: Install MAT standalone
+IntelliJ Integration:
+- Tools → External Tools → Add
+- Program: /path/to/mat/MemoryAnalyzer
+- Arguments: $FilePath$
+- Generate heap dump → Analyze with MAT
+```
+
+#### 5. **Heap Dump Analysis (Built-in)**
+```
+Usage:
+- Help → Diagnostic Tools → Analyze Heap Dump
+- Open .hprof files directly
+- View dominator tree
+- Find memory leaks
+```
+
+#### IntelliJ Profiler Configuration
+
+```xml
+<!-- Run configuration VM options -->
+-XX:+HeapDumpOnOutOfMemoryError
+-XX:HeapDumpPath=./dumps
+-Xlog:gc*:file=gc.log
+-XX:+FlightRecorder
+-XX:StartFlightRecording=duration=60s,filename=recording.jfr
+```
+
+### Visual Studio Code Extensions
+
+#### 1. **Java Extension Pack (Microsoft)**
+```json
+// .vscode/launch.json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Launch with Profiling",
+      "request": "launch",
+      "mainClass": "com.example.Main",
+      "vmArgs": "-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=./dumps -Xmx1g",
+      "env": {
+        "JAVA_OPTS": "-XX:+PrintGCDetails"
+      }
+    }
+  ]
+}
+```
+
+#### 2. **Java Debugger**
+Features:
+- Memory view during debugging
+- Variable inspection
+- Heap analysis
+
+#### 3. **Monitor Java Application**
+```
+Installation: Extensions → Search "Monitor Java"
+Features:
+- JMX connection
+- Memory monitoring
+- Thread analysis
+- GC monitoring
+```
+
+#### 4. **Tomcat for Java Extension**
+```json
+// settings.json
+{
+  "tomcat.workspace": "/opt/tomcat",
+  "java.jdt.ls.vmargs": "-XX:+UseG1GC -XX:+HeapDumpOnOutOfMemoryError"
+}
+```
+
+#### 5. **Remote Development Extension**
+```bash
+# Connect to remote Kubernetes pod
+code --install-extension ms-vscode-remote.remote-ssh
+code --install-extension ms-vscode-remote.remote-containers
+```
+
+### VS Code Tasks for Memory Analysis
+
+```json
+// .vscode/tasks.json
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Take Heap Dump",
+      "type": "shell",
+      "command": "jmap -dump:format=b,file=heapdump-${workspaceFolderBasename}.hprof ${input:pid}",
+      "problemMatcher": []
+    },
+    {
+      "label": "Analyze GC Log",
+      "type": "shell",
+      "command": "java -jar gcviewer.jar gc.log",
+      "problemMatcher": []
+    },
+    {
+      "label": "Start VisualVM",
+      "type": "shell",
+      "command": "visualvm --openid ${input:pid}",
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "pid",
+      "type": "promptString",
+      "description": "Enter Java Process ID"
+    }
+  ]
+}
+```
+
+---
+
+## Remote Memory Analysis Setup
+
+### 1. JMX Remote Connection
+
+```java
+// JMX Connection Code
+import javax.management.*;
+import javax.management.remote.*;
+import java.lang.management.*;
+
+public class RemoteMemoryMonitor {
+    public static void connectAndAnalyze(String host, int port) throws Exception {
+        String url = "service:jmx:rmi:///jndi/rmi://" + host + ":" + port + "/jmxrmi";
+        JMXServiceURL serviceUrl = new JMXServiceURL(url);
+        JMXConnector connector = JMXConnectorFactory.connect(serviceUrl);
+        MBeanServerConnection connection = connector.getMBeanServerConnection();
+        
+        // Get Memory MBean
+        MemoryMXBean memoryMBean = ManagementFactory.newPlatformMXBeanProxy(
+            connection,
+            ManagementFactory.MEMORY_MXBEAN_NAME,
+            MemoryMXBean.class
+        );
+        
+        // Analyze memory
+        MemoryUsage heapUsage = memoryMBean.getHeapMemoryUsage();
+        System.out.println("Heap Used: " + heapUsage.getUsed() / 1024 / 1024 + " MB");
+        System.out.println("Heap Max: " + heapUsage.getMax() / 1024 / 1024 + " MB");
+        
+        // Trigger GC if needed
+        memoryMBean.gc();
+        
+        connector.close();
+    }
+}
+```
+
+### 2. SSH Tunnel for Remote Analysis
+
+```bash
+# Create SSH tunnel to remote server
+ssh -L 9090:localhost:9090 user@remote-server
+
+# Create SSH tunnel to Kubernetes pod
+kubectl port-forward pod/<pod-name> 9090:9090 -n <namespace>
+
+# Connect VisualVM or JConsole
+jconsole localhost:9090
+visualvm --openjmx localhost:9090
+```
+
+### 3. Automated Memory Monitoring Script
+
+```bash
+#!/bin/bash
+# monitor-remote-memory.sh
+
+REMOTE_HOST=$1
+REMOTE_USER=$2
+APP_NAME=$3
+
+# Function to take remote heap dump
+take_heap_dump() {
+    TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+    ssh $REMOTE_USER@$REMOTE_HOST "
+        PID=\$(pgrep -f $APP_NAME)
+        jmap -dump:format=b,file=/tmp/heapdump-$TIMESTAMP.hprof \$PID
+    "
+    scp $REMOTE_USER@$REMOTE_HOST:/tmp/heapdump-$TIMESTAMP.hprof ./
+    echo "Heap dump saved: heapdump-$TIMESTAMP.hprof"
+}
+
+# Function to monitor memory
+monitor_memory() {
+    ssh $REMOTE_USER@$REMOTE_HOST "
+        PID=\$(pgrep -f $APP_NAME)
+        while true; do
+            echo '===== Memory Stats ====='
+            jstat -gcutil \$PID
+            echo '===== Heap Info ====='
+            jcmd \$PID GC.heap_info
+            sleep 5
+        done
+    "
+}
+
+# Main menu
+echo "1. Take Heap Dump"
+echo "2. Monitor Memory"
+read -p "Select option: " choice
+
+case $choice in
+    1) take_heap_dump ;;
+    2) monitor_memory ;;
+    *) echo "Invalid option" ;;
+esac
+```
+
+---
+
+## Container-Specific Memory Troubleshooting
+
+### Common Issues and Solutions
+
+#### 1. Container OOMKilled
+
+```yaml
+# Check why pod was killed
+kubectl describe pod <pod-name> -n <namespace>
+
+# Solution: Increase memory limits
+resources:
+  limits:
+    memory: "4Gi"  # Increased from 2Gi
+  requests:
+    memory: "2Gi"
+```
+
+#### 2. JVM Not Respecting Container Limits
+
+```dockerfile
+# Dockerfile with proper JVM settings
+FROM openjdk:17-slim
+
+# Enable container support
+ENV JAVA_OPTS="-XX:+UseContainerSupport \
+               -XX:MaxRAMPercentage=75.0 \
+               -XX:InitialRAMPercentage=50.0"
+
+ENTRYPOINT ["java", "$JAVA_OPTS", "-jar", "app.jar"]
+```
+
+#### 3. Native Memory Issues
+
+```bash
+# Enable Native Memory Tracking
+-XX:NativeMemoryTracking=summary
+
+# Check native memory in container
+kubectl exec <pod-name> -- jcmd 1 VM.native_memory summary
+```
+
+---
+
+## Production Monitoring Checklist
+
+### Kubernetes/Container Environment
+
+- [ ] Set appropriate resource limits and requests
+- [ ] Enable container-aware JVM flags
+- [ ] Configure heap dumps to persistent volumes
+- [ ] Set up monitoring (Prometheus/Grafana)
+- [ ] Enable JMX with proper security
+- [ ] Configure log aggregation (ELK/CloudWatch)
+- [ ] Set up alerts for memory thresholds
+- [ ] Test horizontal pod autoscaling
+- [ ] Implement graceful shutdown handlers
+- [ ] Regular heap dump analysis in staging
+
+### Tomcat Specific
+
+- [ ] Configure appropriate heap size in setenv.sh
+- [ ] Enable access logs with memory tracking
+- [ ] Set up manager app for monitoring
+- [ ] Configure connection pool sizes
+- [ ] Enable memory leak detection listeners
+- [ ] Monitor PermGen/Metaspace usage
+- [ ] Set session timeout appropriately
+- [ ] Configure thread pool sizes
+- [ ] Enable GC logging
+- [ ] Regular application redeployment testing
+
+---
+
 ## Additional Resources
 
 - [Official JVM Tuning Guide](https://docs.oracle.com/en/java/javase/17/gctuning/)
 - [Baeldung - Java Heap Dump Capture](https://www.baeldung.com/java-heap-dump-capture)
 - [Eclipse MAT Documentation](https://www.eclipse.org/mat/documentation/)
 - [G1GC Tuning Guide](https://www.oracle.com/technical-resources/articles/java/g1gc.html)
+- [Kubernetes Java Apps Best Practices](https://kubernetes.io/docs/tutorials/configuration/configure-java-microservice/)
+- [AWS EKS Best Practices](https://aws.github.io/aws-eks-best-practices/)
+- [Docker Java Application Guide](https://docs.docker.com/language/java/)
+- [Tomcat Memory Configuration](https://tomcat.apache.org/tomcat-9.0-doc/config/)
 
 ---
 
