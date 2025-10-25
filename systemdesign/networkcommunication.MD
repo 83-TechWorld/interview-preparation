@@ -449,3 +449,177 @@ This documentation is provided for educational purposes.
 *Based on the article by Rocky Bhatia on System Design components*
 
 *Based on the excellent article by [Rocky Bhatia](https://rockybhatia.substack.com/p/system-design-load-balancer-vs-reverse)*
+
+
+Absolutely! I’ve prepared a **GitHub Markdown** document for you that explains **Load Balancer, Reverse Proxy, API Gateway, and Service Discovery** along with diagrams and explanations. You can save it as `architecture-components.md` in your GitHub repo.
+
+---
+
+```markdown
+# Load Balancer, Reverse Proxy, API Gateway, and Service Discovery
+
+This document explains key components in modern microservices architectures, their differences, roles, and how service discovery fits into the flow.
+
+---
+
+## 1. Load Balancer
+
+**Definition:**  
+A Load Balancer (LB) distributes incoming client requests across multiple backend servers to ensure high availability, scalability, and fault tolerance.
+
+**Responsibilities:**
+- Distribute traffic evenly or based on strategy (round-robin, least connections, IP hash, etc.)
+- Detect unhealthy instances via health checks
+- Improve fault tolerance and scalability
+
+**Example Tools:**  
+- NGINX, HAProxy, AWS ELB, GCP Load Balancer
+
+**Diagram:**
+```
+
+Client
+↓
+[Load Balancer]
+↓
+Server A / Server B / Server C
+
+```
+
+---
+
+## 2. Reverse Proxy
+
+**Definition:**  
+A Reverse Proxy sits in front of backend servers and forwards client requests to appropriate servers. It hides backend details from clients.
+
+**Why "Reverse"?**  
+Unlike a forward proxy that acts on behalf of the client, a reverse proxy acts on behalf of the server. It intercepts requests meant for servers, forwards them, and returns responses to the client.
+
+**Responsibilities:**
+- SSL/TLS termination
+- Caching responses
+- URL rewriting
+- Hiding internal server IPs
+- Optional load balancing
+
+**Example Tools:**  
+- NGINX, Apache HTTP Server, Envoy
+
+**Diagram:**
+```
+
+Client
+↓
+[Reverse Proxy]
+↓
+Server A / Server B / Server C
+
+```
+
+---
+
+## 3. API Gateway
+
+**Definition:**  
+An API Gateway is a single entry point for clients into a microservices architecture. It handles routing, transformations, security, and aggregation.
+
+**Responsibilities:**
+- Route requests to appropriate microservices
+- Authentication and Authorization
+- Rate limiting, throttling
+- Request/response transformation
+- Aggregating multiple service responses
+
+**Example Tools:**  
+- Kong, Apigee, AWS API Gateway, NGINX (as API Gateway)
+
+**Diagram:**
+```
+
+Client
+↓
+[API Gateway]
+↓
+Service A / Service B / Service C
+
+```
+
+---
+
+## 4. Service Discovery
+
+**Definition:**  
+Service Discovery is a mechanism to dynamically locate service instances in a microservices system.
+
+**Responsibilities:**
+- Maintain a registry of active service instances
+- Return healthy instance endpoints for routing
+- Support dynamic scaling (adding/removing instances)
+
+**Example Tools:**  
+- Consul, Eureka, Zookeeper, Kubernetes Service
+
+**Where Service Discovery Fits:**
+- **API Gateway:** Routes requests dynamically to the correct service instance.
+- **Load Balancer:** Can use discovery to know available servers.
+- **Reverse Proxy:** May integrate with service discovery for dynamic backend resolution.
+
+**Diagram:**
+```
+
+Client
+↓
+[API Gateway]
+↓
+[Reverse Proxy] → Service Discovery → Picks healthy instance
+↓
+Service Instance
+
+```
+
+---
+
+## 5. Component Flow in Modern Microservices
+
+```
+
+Client
+↓
+[Load Balancer] → optional external LB
+↓
+[API Gateway] → may integrate service discovery
+↓
+[Reverse Proxy / Ingress] → optional internal routing, caching, SSL
+↓
+Service Discovery → resolves healthy instance
+↓
+Microservice Instance
+
+```
+
+---
+
+## 6. Summary
+
+| Component       | Role / Responsibility                                                                 |
+|-----------------|-------------------------------------------------------------------------------------|
+| Load Balancer   | Distributes traffic, ensures high availability, performs health checks              |
+| Reverse Proxy   | Acts on behalf of backend servers, hides internal architecture, optional caching    |
+| API Gateway     | Single entry point for clients, routes, transforms, secures, aggregates services    |
+| Service Discovery | Dynamically finds healthy service instances, supports scaling and dynamic routing |
+
+---
+
+## References
+
+- [System Design Newsletter: API Gateway vs Load Balancer vs Reverse Proxy](https://newsletter.systemdesign.one/p/api-gateway-load-balancer-reverse-proxy)  
+- [NGINX Reverse Proxy vs API Gateway](https://www.nginx.com/resources/glossary/reverse-proxy/)  
+- [Kong API Gateway Overview](https://konghq.com/blog/engineering/api-gateway-vs-api-proxy-understanding-the-differences)  
+- [Service Discovery in Microservices](https://microservices.io/patterns/service-discovery.html)  
+```
+
+---
+
+If you want, I can also **add a diagram image embedded in Markdown** showing the full flow (Client → API Gateway → Reverse Proxy → Load Balancer → Service Discovery → Microservices) so it looks professional for GitHub README.
+
