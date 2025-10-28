@@ -1,4 +1,3 @@
-
 ---
 
 ````markdown
@@ -164,27 +163,71 @@ Amazon’s analytics system aggregates millions of sales transactions daily to i
 
 ## 🧭 Decision Flow (SQL vs NoSQL)
 
-```text
-                ┌───────────────┐
-                │  Is data structured? │
-                └───────┬─────────────┘
-                        │ Yes
-                        ▼
-               ┌──────────────────┐
-               │ Need complex joins? │
-               └───────┬───────────┘
-                       │ Yes → SQL (PostgreSQL/MySQL)
-                       │ No  → NewSQL (CockroachDB)
-                       │
-         ┌─────────────┴─────────────────┐
-         │ No → Data is semi/unstructured │
-         └─────────────┬─────────────────┘
-                       │
-            ┌──────────┴─────────┐
-            │ Document-based? → MongoDB │
-            │ Key-value or cache? → Redis │
-            │ High throughput/time-series? → Cassandra/InfluxDB │
-````
+```mermaid
+flowchart TD
+    A[Start: Understand Your Data] --> B{Is data structured?}
+    
+    B -->|Yes| C{Need complex joins?}
+    B -->|No| D{Semi-structured data?}
+    
+    C -->|Yes| E[SQL: PostgreSQL/MySQL]
+    C -->|No| F{Need global scaling?}
+    
+    F -->|Yes| G[NewSQL: CockroachDB]
+    F -->|No| H[SQL: PostgreSQL]
+    
+    D -->|Yes| I{Need flexible schema?}
+    D -->|No| J{Unstructured data?}
+    
+    I -->|Yes| K[Document: MongoDB]
+    I -->|No| L[Key-Value: Redis]
+    
+    J -->|Yes| M{Need search/analytics?}
+    J -->|No| P[Object Store: S3]
+    
+    M -->|Search| N[Search: Elasticsearch]
+    M -->|Analytics| O[OLAP: ClickHouse]
+```
+
+---
+
+## 🗂️ Database Type Comparison
+
+```mermaid
+classDiagram
+    class DatabaseTypes {
+        <<interface>>
+    }
+    
+    DatabaseTypes <|-- SQL
+    DatabaseTypes <|-- NoSQL
+    DatabaseTypes <|-- Analytics
+    DatabaseTypes <|-- Hybrid
+    
+    class SQL {
+        PostgreSQL
+        MySQL
+        Oracle
+    }
+    
+    class NoSQL {
+        MongoDB
+        Cassandra
+        Redis
+        Elasticsearch
+    }
+    
+    class Analytics {
+        ClickHouse
+        Snowflake
+        BigQuery
+    }
+    
+    class Hybrid {
+        CockroachDB
+        YugabyteDB
+    }
+```
 
 ---
 
@@ -331,3 +374,5 @@ classDiagram
     class Hybrid_DB {
         Category: Distributed SQL (NewSQL)
     }
+```
+````
