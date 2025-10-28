@@ -1,6 +1,3 @@
----
-
-````markdown
 # 🧭 Database Selection Guide
 
 Choosing the right database for your application is one of the most critical architectural decisions that affects **performance**, **scalability**, **data consistency**, and **maintenance cost**.
@@ -31,7 +28,7 @@ OLAP systems are optimized for **complex analytical queries** on large datasets.
 - **Databases:** Snowflake, Google BigQuery, Amazon Redshift, ClickHouse  
 
 **Example:**  
-Amazon’s analytics system aggregates millions of sales transactions daily to identify best-selling products or predict demand trends.
+Amazon's analytics system aggregates millions of sales transactions daily to identify best-selling products or predict demand trends.
 
 ---
 
@@ -161,36 +158,6 @@ Amazon’s analytics system aggregates millions of sales transactions daily to i
 
 ---
 
-## 🧭 Decision Flow (SQL vs NoSQL)
-
-```mermaid
-flowchart TD
-    A[Start: Understand Your Data] --> B{Is data structured?}
-    
-    B -->|Yes| C{Need complex joins?}
-    B -->|No| D{Semi-structured data?}
-    
-    C -->|Yes| E[SQL: PostgreSQL/MySQL]
-    C -->|No| F{Need global scaling?}
-    
-    F -->|Yes| G[NewSQL: CockroachDB]
-    F -->|No| H[SQL: PostgreSQL]
-    
-    D -->|Yes| I{Need flexible schema?}
-    D -->|No| J{Unstructured data?}
-    
-    I -->|Yes| K[Document: MongoDB]
-    I -->|No| L[Key-Value: Redis]
-    
-    J -->|Yes| M{Need search/analytics?}
-    J -->|No| P[Object Store: S3]
-    
-    M -->|Search| N[Search: Elasticsearch]
-    M -->|Analytics| O[OLAP: ClickHouse]
-```
-
----
-
 ## 🌳 SQL vs NoSQL Decision Tree
 
 ```mermaid
@@ -224,49 +191,41 @@ flowchart TD
 ## 🗂️ Database Type Comparison
 
 ```mermaid
-classDiagram
-    class DatabaseTypes {
-        <<interface>>
-    }
+graph TB
+    subgraph SQL_Databases[SQL Databases]
+        PostgreSQL[PostgreSQL<br/>General-purpose, ACID]
+        MySQL[MySQL<br/>Web apps, CMS]
+        Oracle[Oracle<br/>Enterprise]
+    end
     
-    DatabaseTypes <|-- SQL
-    DatabaseTypes <|-- NoSQL
-    DatabaseTypes <|-- Analytics
-    DatabaseTypes <|-- Hybrid
+    subgraph NoSQL_Databases[NoSQL Databases]
+        MongoDB[MongoDB<br/>Document store]
+        Cassandra[Cassandra<br/>Wide column]
+        Redis[Redis<br/>Key-Value cache]
+        Elasticsearch[Elasticsearch<br/>Search engine]
+        Neo4j[Neo4j<br/>Graph database]
+    end
     
-    class SQL {
-        PostgreSQL
-        MySQL
-        Oracle
-    }
+    subgraph Analytics_Databases[Analytics Databases]
+        ClickHouse[ClickHouse<br/>Real-time OLAP]
+        InfluxDB[InfluxDB<br/>Time-series]
+        Snowflake[Snowflake/BigQuery<br/>Data warehouse]
+    end
     
-    class NoSQL {
-        MongoDB
-        Cassandra
-        Redis
-        Elasticsearch
-    }
-    
-    class Analytics {
-        ClickHouse
-        Snowflake
-        BigQuery
-    }
-    
-    class Hybrid {
-        CockroachDB
-        YugabyteDB
-    }
+    subgraph NewSQL_Databases[NewSQL Databases]
+        CockroachDB[CockroachDB<br/>Distributed SQL]
+        YugabyteDB[YugabyteDB<br/>Multi-region]
+    end
 ```
 
 ---
 
 ## 🧰 Practical Advice
 
-✅ Start simple: **PostgreSQL** covers most structured workloads.
-✅ Add **Redis** for caching heavy read operations.
-✅ Use **MongoDB** for flexible schemas.
-✅ Add **Elasticsearch** for search.
+✅ Start simple: **PostgreSQL** covers most structured workloads.  
+✅ Add **Redis** for caching heavy read operations.  
+✅ Use **MongoDB** for flexible schemas.  
+✅ Add **Elasticsearch** for search.  
 ✅ For analytics, scale to **ClickHouse** or **BigQuery**.
 
 ---
@@ -278,131 +237,3 @@ classDiagram
 * [Snowflake Whitepaper](https://www.snowflake.com/resources/)
 * [CockroachDB Architecture](https://www.cockroachlabs.com/)
 * [Cassandra Documentation](https://cassandra.apache.org/)
-
----
-## 🌳 SQL vs NoSQL Decision Tree (Mermaid Diagram)
-
-```mermaid
-flowchart TD
-
-A[Start: Understand Your Data] --> B{Is your data structured?}
-
-B -->|Yes| C{Do you need complex joins or transactions?}
-B -->|No| D{Is your data semi-structured (JSON/XML)?}
-
-C -->|Yes| E[Choose SQL Database → PostgreSQL / MySQL / Oracle]
-C -->|No| F{Need global scaling or distributed SQL?}
-F -->|Yes| G[Choose NewSQL → CockroachDB / YugabyteDB]
-F -->|No| H[Choose Traditional SQL → PostgreSQL / MariaDB]
-
-D -->|Yes| I{Need flexible schema or nested documents?}
-D -->|No| J{Is data unstructured (text, images, logs)?}
-
-I -->|Yes| K[Choose Document DB → MongoDB / Couchbase]
-I -->|No| L[Choose Key-Value Store → Redis / DynamoDB]
-
-J -->|Yes| M{Need full-text search or analytics?}
-M -->|Search| N[Choose Search DB → Elasticsearch / OpenSearch]
-M -->|Analytics| O[Choose OLAP / Columnar DB → ClickHouse / BigQuery]
-J -->|No| P[Choose Object Storage → S3 / MinIO]
-
-E & G & H & K & L & N & O & P --> Q[✅ Finalize based on consistency, scaling, and latency needs]
-
-
-## 🗂️ Database Type Comparison (Mermaid Diagram)
-
-```mermaid
-classDiagram
-    class PostgreSQL {
-        Type: SQL
-        Best For: General-purpose, complex queries, JSON support
-        Examples: Banking, SaaS
-    }
-
-    class MySQL {
-        Type: SQL
-        Best For: Simple, read-heavy workloads
-        Examples: CMS, Web Apps
-    }
-
-    class MongoDB {
-        Type: NoSQL Document
-        Best For: Flexible schema, rapid iteration
-        Examples: Product catalogs, APIs
-    }
-
-    class Cassandra {
-        Type: NoSQL Wide Column
-        Best For: High write throughput, distributed systems
-        Examples: IoT, Social Feeds
-    }
-
-    class Redis {
-        Type: In-memory Key-Value
-        Best For: Caching, session storage
-        Examples: API Layer
-    }
-
-    class Elasticsearch {
-        Type: Search Engine
-        Best For: Full-text search, log analytics
-        Examples: E-commerce, Monitoring
-    }
-
-    class Neo4j {
-        Type: Graph
-        Best For: Relationships and recommendations
-        Examples: Social Networks
-    }
-
-    class ClickHouse {
-        Type: OLAP
-        Best For: Real-time analytics
-        Examples: BI Dashboards
-    }
-
-    class InfluxDB {
-        Type: Time-series
-        Best For: Monitoring, IoT metrics
-        Examples: Smart Devices
-    }
-
-    class Snowflake_BigQuery {
-        Type: Cloud Data Warehouse
-        Best For: Large-scale analytics
-        Examples: Enterprise Analytics
-    }
-
-    class CockroachDB_YugabyteDB {
-        Type: NewSQL
-        Best For: Global distributed SQL
-        Examples: Multi-region Applications
-    }
-
-    %% Relationships
-    SQL_DB <|-- PostgreSQL
-    SQL_DB <|-- MySQL
-    NoSQL_DB <|-- MongoDB
-    NoSQL_DB <|-- Cassandra
-    NoSQL_DB <|-- Redis
-    NoSQL_DB <|-- Elasticsearch
-    NoSQL_DB <|-- Neo4j
-    Analytics_DB <|-- ClickHouse
-    Analytics_DB <|-- InfluxDB
-    Analytics_DB <|-- Snowflake_BigQuery
-    Hybrid_DB <|-- CockroachDB_YugabyteDB
-
-    class SQL_DB {
-        Category: Relational Databases
-    }
-    class NoSQL_DB {
-        Category: Non-Relational Databases
-    }
-    class Analytics_DB {
-        Category: Analytical Databases
-    }
-    class Hybrid_DB {
-        Category: Distributed SQL (NewSQL)
-    }
-```
-````
