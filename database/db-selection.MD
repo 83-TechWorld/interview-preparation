@@ -191,6 +191,36 @@ flowchart TD
 
 ---
 
+## 🌳 SQL vs NoSQL Decision Tree
+
+```mermaid
+flowchart TD
+    Start[Start: Understand Your Data] --> IsStructured{Is data structured?}
+    
+    IsStructured -->|Yes| NeedJoins{Need complex joins?}
+    IsStructured -->|No| IsSemiStructured{Semi-structured data?}
+    
+    NeedJoins -->|Yes| UseSQL[SQL: PostgreSQL/MySQL]
+    NeedJoins -->|No| NeedGlobalScale{Need global scaling?}
+    
+    NeedGlobalScale -->|Yes| UseNewSQL[NewSQL: CockroachDB]
+    NeedGlobalScale -->|No| UsePostgres[SQL: PostgreSQL]
+    
+    IsSemiStructured -->|Yes| NeedFlexSchema{Need flexible schema?}
+    IsSemiStructured -->|No| IsUnstructured{Is data unstructured?}
+    
+    NeedFlexSchema -->|Yes| UseMongoDB[Document: MongoDB]
+    NeedFlexSchema -->|No| UseRedis[Key-Value: Redis]
+    
+    IsUnstructured -->|Yes| NeedSearchAnalytics{Need search/analytics?}
+    IsUnstructured -->|No| UseS3[Object Store: S3]
+    
+    NeedSearchAnalytics -->|Search| UseElastic[Search: Elasticsearch]
+    NeedSearchAnalytics -->|Analytics| UseOLAP[OLAP: ClickHouse]
+```
+
+---
+
 ## 🗂️ Database Type Comparison
 
 ```mermaid
