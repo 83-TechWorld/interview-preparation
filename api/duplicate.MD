@@ -535,19 +535,18 @@ WHERE order_id = 'ORD-001';
 
 ## 🔐 Diagram — End-to-End Payment Lifecycle
 
-```mermaid
 flowchart TD
-A[User Places Order ORD-001] --> B[Server Creates PaymentIntent txn_123]
-B --> C[DB: txn_123 - PENDING]
-C --> D[User Confirms Payment]
-D --> E[Gateway Processing...]
-E -->|Success| F[txn_123 -> SUCCESS]
-F --> G[Order ORD-001 -> PAID]
-E -->|Fail| H[txn_123 -> FAILED]
-H --> I[User Retries → txn_124 (new intent)]
-I --> J[txn_124 -> SUCCESS]
-J --> G
-```
+    A[User Places Order ORD-001] --> B[Server Creates PaymentIntent txn_123]
+    B --> C[DB: txn_123 - PENDING]
+    C --> D[User Confirms Payment]
+    D --> E[Gateway Processing...]
+    E -->|Success| F[txn_123 - SUCCESS]
+    F --> G[Order ORD-001 - PAID]
+    E -->|Fail| H[txn_123 - FAILED]
+    H --> I[User Retries -> txn_124 (new intent)]
+    I --> J[txn_124 - SUCCESS]
+    J --> G
+
 
 ---
 
