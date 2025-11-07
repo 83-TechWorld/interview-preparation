@@ -556,7 +556,7 @@ graph TD
 graph LR
     A[Command API (Writes)] --> B[(Write DB - ACID)]
     C[Query API (Reads)] --> D[(Read DB / Cache - Optimized)]
-    B-->|Sync/Async via Kafka|D
+    B-->|Sync/Async via Kafka/Message Bus|D
 ```
 
 ### Implementation Focus
