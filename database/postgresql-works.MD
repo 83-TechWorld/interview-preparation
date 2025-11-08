@@ -107,13 +107,14 @@ In PostgreSQL, **updates create new tuples** instead of overwriting old data —
 
 ```mermaid
 graph TD
-    A[Old Row Version] -->|UPDATE| B[New Row Version]
-    B --> C[New Transaction ID (XMIN)]
-    A --> D[Marked Dead by Transaction (XMAX)]
-    C --> E[WAL Record for Recovery]
-    E --> F[Commit + Flush WAL]
-    F --> G[Success Response to Client]
-    G --> H[Later: VACUUM removes old version]
+    A["Old Row Version"] -->|UPDATE| B["New Row Version"]
+    B --> C["New Transaction ID: XMIN"]
+    A --> D["Marked Dead by Transaction: XMAX"]
+    C --> E["WAL Record for Recovery"]
+    E --> F["Commit and Flush WAL"]
+    F --> G["Success Response to Client"]
+    G --> H["Later: VACUUM removes old version"]
+
 ```
 
 ---
@@ -192,9 +193,10 @@ Each row version carries transaction IDs:
 
 ```mermaid
 graph LR
-A[Tuple Created (xmin=X1)] --> B[Updated (xmax=X2)]
-B --> C[New Tuple (xmin=X2)]
-C --> D[Old Tuple Reclaimed by VACUUM]
+    A["Tuple Created (xmin=X1)"] --> B["Updated (xmax=X2)"]
+    B --> C["New Tuple (xmin=X2)"]
+    C --> D["Old Tuple Reclaimed by VACUUM"]
+
 ```
 
 ---
