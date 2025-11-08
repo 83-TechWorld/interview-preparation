@@ -164,11 +164,13 @@ sequenceDiagram
 
 ```mermaid
 graph LR
-  subgraph Pod
-    A[Main App Container (Business Logic)]
-    B[Sidecar Container (Envoy/Prometheus Agent)]
-    A <-- Shared Network --> B
+  subgraph "Pod"
+    direction LR
+    A["Main App Container<br/>(Business Logic)"]
+    B["Sidecar Container<br/>(Envoy / Prometheus Agent)"]
+    A <-->|"Shared Network"| B
   end
+
 ```
 
 ---
@@ -191,23 +193,24 @@ graph TD
 ```mermaid
 graph LR
     User[User]
-    
-    subgraph Command Side (Writes)
-        CommandAPI[Command API / Write Service]
-        WriteDB[(Write DB - ACID)]
+
+    subgraph "Command Side (Writes)"
+        CommandAPI["Command API / Write Service"]
+        WriteDB[("Write DB - ACID")]
         CommandAPI --> WriteDB
-        WriteDB -->|Event (Kafka/Bus)| MessageBus((Message Bus))
+        WriteDB -->|"Event (Kafka / Bus)"| MessageBus(("Message Bus"))
     end
-    
-    subgraph Query Side (Reads)
-        QueryAPI[Query API / Read Service]
-        ReadDB[(Read DB / Cache - Optimized)]
+
+    subgraph "Query Side (Reads)"
+        QueryAPI["Query API / Read Service"]
+        ReadDB[("Read DB / Cache - Optimized")]
         QueryAPI --> ReadDB
     end
 
-    User -->|Command| CommandAPI
+    User -->|"Command"| CommandAPI
     MessageBus --> ReadDB
-    User -->|Query| QueryAPI
+    User -->|"Query"| QueryAPI
+
 ```
 
 ---
@@ -216,16 +219,24 @@ graph LR
 
 ```mermaid
 graph TD
-    subgraph Client Application
-        A[Client Pool: Service A - 5 Threads] --> SA(Service A - Slow/Failing)
-        B[Client Pool: Service B - 5 Threads] --> SB(Service B - Healthy)
-        C[Client Pool: Service C - 5 Threads] --> SC(Service C - Healthy)
+    subgraph "Client Application"
+        A["Client Pool: Service A - 5 Threads"] --> SA["Service A (Slow / Failing)"]
+        B["Client Pool: Service B - 5 Threads"] --> SB["Service B (Healthy)"]
+        C["Client Pool: Service C - 5 Threads"] --> SC["Service C (Healthy)"]
     end
 
-    SA -.-> F(Failing/Slow Response)
+    SA -.-> F["Failing / Slow Response"]
     A --x F
-    note right of A: Pool A exhausted (Failure contained)
-    note right of B: Pool B unaffected
+
+    %% Notes using comments
+    %% GitHub Mermaid doesn’t support note blocks in flowcharts, use label text instead
+    A:::fail
+    B:::ok
+    C:::ok
+
+    classDef fail fill:#FFCCCC,stroke:#A00,stroke-width:2px;
+    classDef ok fill:#CCFFCC,stroke:#0A0,stroke-width:2px;
+
 ```
 
 ---
@@ -234,25 +245,27 @@ graph TD
 
 ```mermaid
 graph TD
-    subgraph Control Plane (Istio/Linkerd)
-        CP[Configuration & Policy Management]
+    subgraph "Control Plane (Istio / Linkerd)"
+        CP["Configuration & Policy Management"]
     end
 
-    subgraph Pod A (K8s)
-        SA((Service A - Business Logic))
-        ProxyA[Sidecar Proxy (Envoy)]
+    subgraph "Pod A (Kubernetes)"
+        SA["Service A - Business Logic"]
+        ProxyA["Sidecar Proxy (Envoy)"]
         SA <--> ProxyA
     end
 
-    subgraph Pod B (K8s)
-        SB((Service B - Business Logic))
-        ProxyB[Sidecar Proxy (Envoy)]
+    subgraph "Pod B (Kubernetes)"
+        SB["Service B - Business Logic"]
+        ProxyB["Sidecar Proxy (Envoy)"]
         SB <--> ProxyB
     end
 
     CP --- ProxyA
     CP --- ProxyB
-    ProxyA -- mTLS --> ProxyB
+
+    ProxyA -- "mTLS Communication" --> ProxyB
+
 ```
 
 ---
