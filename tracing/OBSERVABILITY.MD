@@ -346,28 +346,43 @@ Key configuration items:
 
 ```mermaid
 flowchart LR
-  subgraph Metrics
-    A[Spring Boot + Micrometer] -->|exposes /actuator/prometheus| P[Prometheus Scrape]
-    HostExporter[node_exporter / cAdvisor] --> P
+  %% ===== Metrics =====
+  subgraph M[Metrics]
+    A[Spring Boot + Micrometer] -->|exposes /actuator/prometheus| P[Prometheus_Scrape]
+    H[node_exporter / cAdvisor] --> P
   end
 
-  subgraph Traces
-    Svc1[Service A (APM agent)] -->|span| APM[APM Server]
-    Svc2[Service B (APM agent)] -->|span| APM
+  %% ===== Traces =====
+  subgraph T[Traces]
+    S1[Service_A_with_APM_agent] -->|spans| APM[APM_Server]
+    S2[Service_B_with_APM_agent] -->|spans| APM
   end
 
-  subgraph Logs
-    AppLogs[App logs (JSON)] --> FB[Filebeat / Fluentd]
+  %% ===== Logs =====
+  subgraph L[Logs]
+    AppLogs[Application_Logs_JSON] --> FB[Filebeat_or_Fluentd]
     FB --> LS[Logstash]
     LS --> ES[Elasticsearch]
   end
 
-  P --> Grafana[Grafana Dashboards]
-  ES --> Kibana[Kibana / APM UI]
+  %% ===== Visualization & Analysis =====
+  P --> G[Grafana_Dashboards]
+  ES --> K[Kibana_APM_UI]
   APM --> ES
-  Grafana -->|link| Kibana
-  Grafana -->|datasource| Prometheus
-  Kibana -->|search| ES
+
+  G -->|Data_Source| P
+  G -->|Link_to_Traces| K
+  K -->|Query| ES
+
+  %% Optional grouping for clarity
+  classDef metrics fill:#cce5ff,stroke:#003366,stroke-width:1px;
+  classDef traces fill:#e6ccff,stroke:#4b0082,stroke-width:1px;
+  classDef logs fill:#ffe6cc,stroke:#994d00,stroke-width:1px;
+
+  class M metrics;
+  class T traces;
+  class L logs;
+
 ```
 
 ---
