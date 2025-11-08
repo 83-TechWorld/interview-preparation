@@ -1,15 +1,3 @@
-Absolutely ✅ — here’s the **fully rewritten, GitHub-ready Markdown document**:
-All diagrams are **Mermaid-validated** (render perfectly on GitHub), each **design pattern includes**:
-
-* Short explanation
-* Real-time distributed system use cases
-* How **banking and tech companies** apply it
-* **Clean visuals** that render correctly
-* Spring Boot or architecture relevance
-
----
-
-````markdown
 # 🌐 Microservices Design Patterns in Spring Boot — Real-World Architecture Guide
 
 A comprehensive, GitHub-ready visual guide to core microservice design patterns used by **tech giants** (Netflix, Uber, Amazon) and **banking enterprises** (JPMC, Citi, HSBC) — with **working diagrams**, **use cases**, and **Spring Boot alignment**.
@@ -30,15 +18,6 @@ stateDiagram-v2
     Open --> HalfOpen: Timeout expired
     HalfOpen --> Closed: Success responses
     HalfOpen --> Open: More failures
-
-    note right of Open
-        Requests fail fast  
-        Prevent system overload
-    end note
-
-    note right of HalfOpen
-        Testing partial recovery
-    end note
 ```
 
 ### 💼 Real-Time Use Case
@@ -47,9 +26,6 @@ stateDiagram-v2
 | **Netflix** | Protects video playback from Recommendation Service failures | Used **Resilience4j / Hystrix** for fault isolation |
 | **HSBC Bank** | Payment gateway health monitoring | If one payment processor fails, auto-switch to backup |
 | **Uber** | Handles location and pricing microservices | Uses **Polly / Resilience4j** to retry only healthy endpoints |
-
-### 🧩 Spring Boot
-Use `spring-cloud-starter-circuitbreaker-resilience4j` to wrap external REST calls with fallback methods and thresholds.
 
 ---
 
@@ -60,19 +36,12 @@ The **Aggregator Pattern** collects data from multiple services and compiles a s
 
 ### 🏗️ Architecture Visualization
 ```mermaid
-graph TB
-    Client[Client Application]
-    Aggregator[Aggregator Service]
-    UserService[User Service]
-    OrderService[Order Service]
-    PaymentService[Payment Service]
-    ReviewService[Review Service]
-
-    Client -->|Single API Call| Aggregator
-    Aggregator --> UserService
-    Aggregator --> OrderService
-    Aggregator --> PaymentService
-    Aggregator --> ReviewService
+graph TD
+    Client[Client App] --> Aggregator[Aggregator Service]
+    Aggregator --> UserService[User Service]
+    Aggregator --> OrderService[Order Service]
+    Aggregator --> PaymentService[Payment Service]
+    Aggregator --> ReviewService[Review Service]
     Aggregator -->|Unified Response| Client
 ```
 
@@ -94,11 +63,11 @@ Ideal for **multi-step operations** like order validation → inventory → paym
 ### 🏗️ Architecture Visualization
 ```mermaid
 graph LR
-    Request[Request] --> Auth[Authentication Handler]
-    Auth --> AuthZ[Authorization Handler]
-    AuthZ --> Validate[Validation Handler]
-    Validate --> RateLimit[Rate Limiting Handler]
-    RateLimit --> BizLogic[Business Logic Handler]
+    Request[Request] --> Auth[Authentication]
+    Auth --> AuthZ[Authorization]
+    AuthZ --> Validate[Validation]
+    Validate --> RateLimit[Rate Limit]
+    RateLimit --> BizLogic[Business Logic]
     BizLogic --> Response[Response]
 ```
 
@@ -124,14 +93,13 @@ sequenceDiagram
     participant I as Inventory Service
     participant S as Shipping Service
 
-    O->>P: 1. Process Payment
+    O->>P: Process Payment
     P-->>O: Payment Success
-    O->>I: 2. Reserve Items
+    O->>I: Reserve Items
     I-->>O: Items Reserved
-    O->>S: 3. Schedule Delivery
+    O->>S: Schedule Delivery
     S-->>O: Delivery Success
-
-    note over O,S: On failure → Compensation triggered
+    Note over O,S: On failure → Compensation triggered
     O->>I: Release Items
     O->>P: Refund Payment
 ```
@@ -157,7 +125,7 @@ graph LR
     direction LR
     App["Main App Container<br/>(Business Logic)"]
     Sidecar["Sidecar Container<br/>(Envoy / Prometheus Agent)"]
-    App <-->|"Shared Network & Volume"| Sidecar
+    App <-->|"Shared Network"| Sidecar
   end
 ```
 
@@ -178,13 +146,12 @@ The **BFF Pattern** builds separate backend APIs for different clients — **mob
 ### 🏗️ Architecture Visualization
 ```mermaid
 graph TD
-    M[Mobile App] -->|Optimized API| BFF_Mobile
-    W[Web App] -->|Detailed Data| BFF_Web
-
-    BFF_Mobile --> OrderService
-    BFF_Web --> AnalyticsService
-
-    OrderService & AnalyticsService --> DB[(Microservice Databases)]
+    M[Mobile App] --> BFF_Mobile[Mobile BFF]
+    W[Web App] --> BFF_Web[Web BFF]
+    BFF_Mobile --> OrderService[Order Service]
+    BFF_Web --> AnalyticsService[Analytics Service]
+    OrderService --> DB[(Database)]
+    AnalyticsService --> DB
 ```
 
 ### 💼 Real-Time Use Case
@@ -200,7 +167,7 @@ graph TD
 
 ### 🧠 Concept
 The **Command Query Responsibility Segregation (CQRS)** pattern separates **read and write** models.  
-Commands update state; Queries read from optimized stores. Ideal for analytics and high-scale systems.
+Commands update state; Queries read from optimized stores.
 
 ### 🏗️ Architecture Visualization
 ```mermaid
@@ -216,7 +183,7 @@ graph LR
 
     subgraph "Query Side (Reads)"
         QueryAPI["Query API / Read Service"]
-        ReadDB[("Read DB / Cache - Optimized")]
+        ReadDB[("Read DB / Cache")]
         QueryAPI --> ReadDB
     end
 
@@ -251,13 +218,6 @@ graph TD
     A --> SA["Service A - Slow / Failing"]
     B --> SB["Service B - Healthy"]
     C --> SC["Service C - Healthy"]
-
-    SA -.-> F["Failure Isolated"]
-
-    classDef fail fill:#FFCCCC,stroke:#A00,stroke-width:2px;
-    classDef ok fill:#CCFFCC,stroke:#0A0,stroke-width:2px;
-    class A fail;
-    class B,C ok;
 ```
 
 ### 💼 Real-Time Use Case
@@ -320,24 +280,5 @@ graph TD
 | **CQRS** | Split read/write models | JPMC, Amazon | Analytics + performance | ⚙️ High |
 | **Bulkhead** | Resource isolation | Netflix, Barclays | Fault containment | ⚙️ Medium |
 | **Service Mesh** | Centralized network control | Google, HSBC | Large-scale K8s | ⚙️ High |
-
----
-
-## 🧩 Summary
-
-Modern distributed systems combine these patterns:
-
-- 🛡️ **Circuit Breaker + Bulkhead + Retry** → Resilience  
-- 🧠 **CQRS + Saga** → Transaction integrity  
-- 🌍 **Sidecar + Service Mesh** → Observability + mTLS  
-- ⚙️ **Aggregator + BFF** → Optimized API layer  
-
----
-
-⭐ **Author’s Note:**  
-All diagrams have been **validated with GitHub’s Mermaid engine**.  
-These patterns reflect real-world architectures across **banking, e-commerce, and SaaS** platforms built on **Spring Boot, Kafka, Istio, and Kubernetes**.
-
-````
 
 ---
