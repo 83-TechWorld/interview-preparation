@@ -2014,3 +2014,29 @@ This guide covers the essential aspects of Java Collections Framework including:
 - Performance characteristics and Big O notation
 - Best practices and common pitfalls
 - Interview preparation materials
+
+Sorting Parent + Nested List (Very Common Interview Case)
+Example:
+Sort Departments by name
+Sort Employees inside each department by age & salary
+departments.stream()
+    .sorted(Comparator.comparing(Department::getDeptName))
+    .forEach(dept ->
+        dept.getEmployees().sort(
+            Comparator.comparing(Employee::getAge)
+                      .thenComparing(Employee::getSalary)
+        )
+    );
+6️⃣ Null-Safe Nested Sorting (Production-Ready)
+Comparator<Employee> empComparator =
+    Comparator.comparing(Employee::getSalary, Comparator.nullsLast(Double::compare))
+              .thenComparing(Employee::getName, Comparator.nullsLast(String::compareTo));
+
+departments.forEach(dept -> dept.getEmployees().sort(empComparator));
+
+departments.forEach(department -> 
+    department.getEmployees().sort(
+        Comparator.comparing(Employee::getSalary).reversed()
+                  .thenComparing(Employee::getName)
+    )
+);
